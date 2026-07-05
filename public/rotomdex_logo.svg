@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 100" width="540" height="100">
+  <!-- Pokéball -->
+  <!-- Outer circle -->
+  <circle cx="45" cy="45" r="40" fill="#fff" stroke="#1a1a1a" stroke-width="4"/>
+  <!-- Red top half -->
+  <path d="M 8.5 45 A 36.5 36.5 0 0 1 81.5 45 Z" fill="#e03020"/>
+  <!-- Middle divider line -->
+  <rect x="5" y="42" width="80" height="6" fill="#1a1a1a" rx="3"/>
+  <!-- Center button outer -->
+  <circle cx="45" cy="45" r="12" fill="#1a1a1a"/>
+  <!-- Center button inner -->
+  <circle cx="45" cy="45" r="7" fill="#fff" stroke="#1a1a1a" stroke-width="2"/>
+  <!-- Shine -->
+  <circle cx="33" cy="30" r="5" fill="rgba(255,255,255,0.35)"/>
+
+  <!-- ROTOMDEX text -->
+  <text
+    x="100"
+    y="72"
+    font-family="'Arial Black', 'Impact', 'Arial', sans-serif"
+    font-size="54"
+    font-weight="900"
+    fill="#FFD700"
+    stroke="#1a1a1a"
+    stroke-width="6"
+    stroke-linejoin="round"
+    paint-order="stroke fill"
+    letter-spacing="2"
+  >ROTOMDEX</text>
+</svg>

@@ -1,8 +1,10 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# ============================================================
+# RotomDex — .gitignore
+# ============================================================
 
-# dependencies
-/node_modules
-/.pnp
+# ── Dependencies ─────────────────────────────────────────────
+node_modules/
+.pnp
 .pnp.*
 .yarn/*
 !.yarn/patches
@@ -10,32 +12,90 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
-/coverage
+# ── Next.js build output ─────────────────────────────────────
+.next/
+out/
+build/
 
-# next.js
-/.next/
-/out/
+# ── Prisma generated client ──────────────────────────────────
+# The generated Prisma Client is rebuilt via `prisma generate`
+# and should never be committed — it's platform-specific
+generated/
 
-# production
-/build
+# ── Environment variables ────────────────────────────────────
+# Never commit secrets. Use .env.example for reference only.
+.env
+.env.*
+!.env.example
 
-# misc
-.DS_Store
-*.pem
+# ── Test coverage ─────────────────────────────────────────────
+coverage/
+.nyc_output/
 
-# debug
+# ── Debug logs ───────────────────────────────────────────────
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
+pnpm-debug.log*
+*.log
 
-# env files (can opt-in for committing if needed)
-.env*
-
-# vercel
-.vercel
-
-# typescript
+# ── TypeScript ───────────────────────────────────────────────
 *.tsbuildinfo
 next-env.d.ts
+
+# ── OS-specific ──────────────────────────────────────────────
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverrideIcon
+._*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+
+# ── Editors & IDEs ───────────────────────────────────────────
+# VS Code — keep workspace settings but ignore personal ones
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+
+# JetBrains (WebStorm, IntelliJ, etc.)
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Vim / Neovim
+*.swp
+*.swo
+*.swn
+Session.vim
+.netrwhist
+
+# Emacs
+*~
+\#*\#
+
+# ── Vercel deployment ─────────────────────────────────────────
+.vercel/
+
+# ── Misc ─────────────────────────────────────────────────────
+*.pem
+*.key
+.cache/
+tmp/
+temp/

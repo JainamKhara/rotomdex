@@ -1,0 +1,209 @@
+// Database provider - PostgreSQL on Neon or local
+datasource db {
+  provider = "postgresql"
+}
+
+// Prisma Client generator
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+// Main Pokemon model with full details
+model Pokemon {
+  id              Int     @id @unique
+  name            String  @unique @db.VarChar(100)
+  nameJapanese    String? @db.VarChar(100)
+  
+  // Physical attributes
+  height          Int?    // in decimeters
+  weight          Int?    // in hectograms
+  baseExp         Int?
+  
+  // Type system (array support in PostgreSQL)
+  types           String[]
+  
+  // Base stats
+  hp              Int
+  attack          Int
+  defense         Int
+  spAtk           Int
+  spDef           Int
+  speed           Int
+  
+  // Classification
+  generation      Int
+  family          String? // bulbasaur-family
+  genderRate      Float?  // -1 to 8 (ratio)
+  catchRate       Int?
+  
+  // Media
+  imageUrl        String? @db.Text
+  shinyImageUrl   String? @db.Text
+  spriteUrl       String? @db.Text
+  
+  // Game data
+  isFinal         Boolean @default(false)
+  isBaby          Boolean @default(false)
+  legend          Boolean @default(false)
+  mythical        Boolean @default(false)
+  
+  // Descriptions and info
+  description     String? @db.Text
+  habitat         String? // cave, grassland, sea, etc.
+  
+  // Relationships (new in Prisma 6.x: better cascade handling)
+  userFavorites   UserFavorite[]
+  userPokemon     UserPokemon[]
+  moves           PokemonMove[]
+  abilities        PokemonAbility[]
+  evolutions      EvolutionChain[]
+  stats           PokemonStat[]
+  
+  // Indexes for performance
+  @@index([name])
+  @@index([generation])
+  @@index([types])
+}
+
+// User favorites (many-to-many)
+model UserFavorite {
+  id        String   @id @default(cuid())
+  userId    String   @db.VarChar(255)
+  pokemonId Int
+  pokemon   Pokemon  @relation(fields: [pokemonId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, pokemonId])
+  @@index([userId])
+}
+
+// User's caught Pokemon (team builder)
+model UserPokemon {
+  id           String   @id @default(cuid())
+  userId       String   @db.VarChar(255)
+  pokemonId    Int
+  pokemon      Pokemon  @relation(fields: [pokemonId], references: [id], onDelete: Cascade)
+  teamId       String?
+  team         Team?    @relation(fields: [teamId], references: [id])
+  nickname     String?  @db.VarChar(50)
+  level        Int      @default(1)
+  experience   Int      @default(0)
+  
+  // IVs (Individual Values)
+  ivHp         Int      @default(0)
+  ivAttack     Int      @default(0)
+  ivDefense    Int      @default(0)
+  ivSpAtk      Int      @default(0)
+  ivSpDef      Int      @default(0)
+  ivSpeed      Int      @default(0)
+  
+  // Nature & Ability
+  nature       String?  @db.VarChar(50)
+  abilityUsed  String?  @db.VarChar(100)
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+  @@index([pokemonId])
+}
+
+// Team management
+model Team {
+  id        String       @id @default(cuid())
+  userId    String       @db.VarChar(255)
+  name      String       @db.VarChar(100)
+  pokemon   UserPokemon[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([userId])
+}
+
+// Pokemon moves
+model PokemonMove {
+  id           String   @id @default(cuid())
+  pokemonId    Int
+  pokemon      Pokemon  @relation(fields: [pokemonId], references: [id], onDelete: Cascade)
+  moveName     String   @db.VarChar(100)
+  moveId       Int?
+  
+  // Learn method
+  learnMethod  String   @db.VarChar(50) // "level-up", "machine", "tutor", "egg"
+  learnLevel   Int?
+  
+  power        Int?     // Base power
+  accuracy     Int?     // Accuracy %
+  pp           Int?     // Power points
+  type         String?  @db.VarChar(20)
+  category     String?  @db.VarChar(20) // "physical", "special", "status"
+
+  @@index([pokemonId])
+  @@index([moveName])
+}
+
+// Pokemon abilities
+model PokemonAbility {
+  id        String  @id @default(cuid())
+  pokemonId Int
+  pokemon   Pokemon @relation(fields: [pokemonId], references: [id], onDelete: Cascade)
+  ability   String  @db.VarChar(100)
+  isHidden  Boolean @default(false)
+  desc      String? @db.Text
+
+  @@unique([pokemonId, ability])
+  @@index([pokemonId])
+}
+
+// Evolution chains
+model EvolutionChain {
+  id              String  @id @default(cuid())
+  pokemonId       Int
+  pokemon         Pokemon @relation(fields: [pokemonId], references: [id], onDelete: Cascade)
+  evolvesToId     Int
+  evolvesToName   String  @db.VarChar(100)
+  
+  // Evolution trigger
+  method          String  @db.VarChar(50) // "level-up", "stone", "trade", "happiness"
+  triggerLevel    Int?
+  triggerItem     String? @db.VarChar(100)
+  minHappiness    Int?
+  knownMove       String? @db.VarChar(100)
+  tradeWith       String? @db.VarChar(100)
+
+  @@index([pokemonId])
+  @@index([evolvesToId])
+}
+
+// Detailed stats (for charts)
+model PokemonStat {
+  id        String  @id @default(cuid())
+  pokemonId Int     @unique
+  pokemon   Pokemon @relation(fields: [pokemonId], references: [id], onDelete: Cascade)
+  
+  // Track changes over generations/versions
+  version   String  @db.VarChar(50) // "sv", "scarlet-violet", etc.
+  
+  effHp     Int?    // Effective HP
+  effAttack Int?
+  effDefense Int?
+  effSpAtk  Int?
+  effSpDef  Int?
+  effSpeed  Int?
+
+  @@unique([pokemonId, version])
+}
+
+// Search history (for analytics)
+model SearchQuery {
+  id        String   @id @default(cuid())
+  userId    String?  @db.VarChar(255) // nullable for anonymous
+  query     String   @db.VarChar(500)
+  results   Int      // how many results
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([query])
+}
