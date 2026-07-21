@@ -13,6 +13,10 @@ const pool = new Pool({
   connectionTimeoutMillis: 5000, // fail fast if Neon is slow to respond
 })
 
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle client:', err)
+})
+
 const adapter = new PrismaPg(pool)
 
 export const prisma =
