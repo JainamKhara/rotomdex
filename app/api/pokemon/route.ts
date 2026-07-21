@@ -18,10 +18,19 @@ const pokemonQuerySchema = z.object({
   ids: z.string().optional(), // optional comma-separated list of IDs, e.g. "1,4"
 })
 
+// Global in-memory cache to bypass database roundtrips
+const apiCache = new Map<string, any>()
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = Object.fromEntries(request.nextUrl.searchParams)
     const validatedParams = pokemonQuerySchema.parse(searchParams)
+
+    const cacheKey = JSON.stringify(validatedParams)
+    if (apiCache.has(cacheKey)) {
+      console.log('Returning cached API response for key:', cacheKey)
+      return NextResponse.json(apiCache.get(cacheKey), { status: 200 })
+    }
 
     const {
       search,
@@ -126,18 +135,23 @@ export async function GET(request: NextRequest) {
       evolutions: undefined
     }))
 
-    return NextResponse.json(
-      {
-        data: transformedPokemon,
-        pagination: {
-          total,
-          limit,
-          offset,
-          pages: Math.ceil(total / limit),
-        },
+    const responseData = {
+      data: transformedPokemon,
+      pagination: {
+        total,
+        limit,
+        offset,
+        pages: Math.ceil(total / limit),
       },
-      { status: 200 }
-    )
+    }
+    apiCache.set(cacheKey, responseData)
+    return NextResponse.json(responseData, {
+      status: 200,
+      headers: {
+        // Cache at CDN for 1 hour; serve stale for up to 24 hours while revalidating
+        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+      },
+    })
   } catch (error) {
     console.error('API Error:', error)
     return NextResponse.json(

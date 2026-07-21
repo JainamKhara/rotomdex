@@ -1,7 +1,4 @@
 import React from 'react'
-import Link from 'next/link'
-import { Logo } from '@/components/Logo'
-import { ThemeToggle } from '@/components/ThemeToggle'
 
 export const metadata = {
   title: 'About RotomDex',
@@ -63,29 +60,6 @@ const techStack = [
 export default function AboutPage() {
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-[#0a0a0f] text-slate-900 dark:text-white">
-      {/* Nav */}
-      <nav className="sticky top-0 z-50 h-[68px] w-full bg-white/80 dark:bg-[#0a0a0f]/80 backdrop-blur-xl border-b border-slate-200/60 dark:border-white/[0.06]">
-        <div className="flex items-center justify-between h-full max-w-7xl mx-auto px-6">
-          <Logo />
-          <ul className="hidden md:flex gap-1 items-center h-full">
-            {[['Home', '/'], ['Pokédex', '/pokedex'], ['Compare', '/compare'], ['Teams', '/teams'], ['About', '/about']].map(([label, href]) => (
-              <li key={href}>
-                <Link
-                  href={href}
-                  className={`text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors ${
-                    href === '/about'
-                      ? 'text-brand-red bg-brand-red/10'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5'
-                  }`}
-                >
-                  {label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-          <ThemeToggle />
-        </div>
-      </nav>
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-10 flex flex-col gap-5">
 

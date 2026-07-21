@@ -14,7 +14,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 60 * 1000,
+        // Pokémon data is static — keep it fresh for 5 hours to avoid redundant fetches
+        staleTime: 5 * 60 * 60 * 1000,
       },
     },
   }))

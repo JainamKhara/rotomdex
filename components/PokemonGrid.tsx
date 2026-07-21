@@ -1,11 +1,14 @@
 'use client'
 
 import React, { useState, useTransition, useRef, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery } from '@tanstack/react-query'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useSearchParams } from 'next/navigation'
+import { Search, ArrowUpDown, RefreshCw } from 'lucide-react'
+
+const PAGE_SIZE = 48
+const BRAND = 'oklch(0.55 0.28 29.5)'
 
 interface Pokemon {
   id: number
@@ -19,80 +22,125 @@ interface Pokemon {
 }
 
 const ALL_TYPES = [
-  'normal', 'fire', 'water', 'grass', 'electric', 'ice', 
-  'fighting', 'poison', 'ground', 'flying', 'psychic', 'bug', 
+  'normal', 'fire', 'water', 'grass', 'electric', 'ice',
+  'fighting', 'poison', 'ground', 'flying', 'psychic', 'bug',
   'rock', 'ghost', 'dragon', 'dark', 'steel', 'fairy'
 ]
 
-export function PokemonGrid() {
-  const searchParams = useSearchParams()
-  const urlGen = searchParams.get('generation')
+const GENERATIONS = [
+  { label: 'All Generations', value: '' },
+  { label: 'Gen 1 (Kanto)', value: '1' },
+  { label: 'Gen 2 (Johto)', value: '2' },
+  { label: 'Gen 3 (Hoenn)', value: '3' },
+  { label: 'Gen 4 (Sinnoh)', value: '4' },
+  { label: 'Gen 5 (Unova)', value: '5' },
+  { label: 'Gen 6 (Kalos)', value: '6' },
+  { label: 'Gen 7 (Alola)', value: '7' },
+  { label: 'Gen 8 (Galar/Hisui)', value: '8' },
+  { label: 'Gen 9 (Paldea)', value: '9' },
+]
 
+const SORT_OPTIONS = [
+  { label: 'Number (Low-High)', value: 'id_asc' },
+  { label: 'Number (High-Low)', value: 'id_desc' },
+  { label: 'Name (A-Z)', value: 'name_asc' },
+  { label: 'Name (Z-A)', value: 'name_desc' },
+  { label: 'Stat: HP', value: 'hp' },
+  { label: 'Stat: Attack', value: 'attack' },
+  { label: 'Stat: Defense', value: 'defense' },
+  { label: 'Stat: Speed', value: 'speed' },
+]
+
+const TYPE_COLORS: Record<string, string> = {
+  fire: '#F08030', water: '#6890F0', grass: '#78C850', electric: '#F7D02C',
+  ice: '#98D8D8', fighting: '#C03028', poison: '#A040A0', ground: '#E0C068',
+  flying: '#A890F0', psychic: '#F85888', bug: '#A8B820', rock: '#B8A038',
+  ghost: '#705898', dragon: '#7038F8', dark: '#705848', steel: '#B8B8D0',
+  fairy: '#EE99AC', normal: '#A8A878',
+}
+const getTypeColor = (type: string) => TYPE_COLORS[type.toLowerCase()] ?? '#A8A878'
+
+const GEN_ROMAN: Record<string, string> = {
+  '1': 'I', '2': 'II', '3': 'III', '4': 'IV', '5': 'V',
+  '6': 'VI', '7': 'VII', '8': 'VIII', '9': 'IX'
+}
+
+export function PokemonGrid() {
   const [isPending, startTransition] = useTransition()
   const [filters, setFilters] = useState({
     search: '',
     type: '',
-    generation: urlGen || '1',
+    generation: '',
     sortBy: 'id',
     sortOrder: 'asc'
   })
 
-  const [isTypeDropdownOpen, setIsTypeDropdownOpen] = useState(false)
-  const dropdownRef = useRef<HTMLDivElement>(null)
+  const loadMoreRef = useRef<HTMLDivElement>(null)
 
   const selectedTypes = filters.type ? filters.type.split(',') : []
 
-  // Close dropdown on click outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsTypeDropdownOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  const currentSortKey =
+    filters.sortBy === 'id' && filters.sortOrder === 'asc' ? 'id_asc' :
+    filters.sortBy === 'id' && filters.sortOrder === 'desc' ? 'id_desc' :
+    filters.sortBy === 'name' && filters.sortOrder === 'asc' ? 'name_asc' :
+    filters.sortBy === 'name' && filters.sortOrder === 'desc' ? 'name_desc' :
+    filters.sortBy
 
-  const { data, isLoading } = useQuery({
+  const isSortingByStat = ['hp', 'attack', 'defense', 'speed'].includes(filters.sortBy)
+
+  const {
+    data, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage,
+  } = useInfiniteQuery({
     queryKey: ['pokemon', filters],
-    queryFn: async () => {
+    initialPageParam: 0,
+    queryFn: async ({ pageParam = 0 }) => {
       const params = new URLSearchParams()
       if (filters.search) params.append('search', filters.search)
       if (filters.type) params.append('type', filters.type)
       if (filters.generation) params.append('generation', filters.generation)
       params.append('sort', filters.sortBy)
       params.append('order', filters.sortOrder)
-      params.append('limit', '1025')
-
+      params.append('limit', String(PAGE_SIZE))
+      params.append('offset', String(pageParam))
       const res = await fetch(`/api/pokemon?${params}`)
       if (!res.ok) throw new Error('Failed to fetch')
       return res.json()
     },
+    getNextPageParam: (lastPage, allPages) => {
+      const loaded = allPages.reduce((acc, p) => acc + p.data.length, 0)
+      return loaded < lastPage.pagination.total ? loaded : undefined
+    },
+    staleTime: 5 * 60 * 60 * 1000,
   })
 
-  const pokemonList: Pokemon[] = data?.data || []
+  const pokemonList: Pokemon[] = data?.pages.flatMap((p) => p.data) ?? []
+  const total: number = data?.pages[0]?.pagination.total ?? 0
+
+  useEffect(() => {
+    const el = loadMoreRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage()
+        }
+      },
+      { rootMargin: '200px' }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
   const handleFilterChange = (key: keyof typeof filters, value: string) => {
     startTransition(() => {
       setFilters(prev => {
         const next = { ...prev, [key]: value }
         if (key === 'sortBy') {
-          if (value === 'name_asc') {
-            next.sortBy = 'name'
-            next.sortOrder = 'asc'
-          } else if (value === 'name_desc') {
-            next.sortBy = 'name'
-            next.sortOrder = 'desc'
-          } else if (value === 'id_desc') {
-            next.sortBy = 'id'
-            next.sortOrder = 'desc'
-          } else if (value === 'hp' || value === 'attack' || value === 'defense' || value === 'speed') {
-            next.sortBy = value
-            next.sortOrder = 'desc'
-          } else {
-            next.sortBy = 'id'
-            next.sortOrder = 'asc'
-          }
+          if (value === 'name_asc') { next.sortBy = 'name'; next.sortOrder = 'asc' }
+          else if (value === 'name_desc') { next.sortBy = 'name'; next.sortOrder = 'desc' }
+          else if (value === 'id_desc') { next.sortBy = 'id'; next.sortOrder = 'desc' }
+          else if (['hp', 'attack', 'defense', 'speed'].includes(value)) { next.sortBy = value; next.sortOrder = 'desc' }
+          else { next.sortBy = 'id'; next.sortOrder = 'asc' }
         }
         return next
       })
@@ -103,245 +151,270 @@ export function PokemonGrid() {
     let newTypes = [...selectedTypes]
     if (newTypes.includes(type)) {
       newTypes = newTypes.filter(t => t !== type)
-    } else {
-      if (newTypes.length >= 2) {
-        newTypes = [newTypes[1], type]
-      } else {
-        newTypes.push(type)
-      }
+    } else if (newTypes.length < 2) {
+      newTypes = [...newTypes, type]
     }
     handleFilterChange('type', newTypes.join(','))
   }
 
-  const getTypeColor = (type: string) => {
-    switch (type.toLowerCase()) {
-      case 'fire': return '#F08030'
-      case 'water': return '#6890F0'
-      case 'grass': return '#78C850'
-      case 'electric': return '#F7D02C'
-      case 'ice': return '#98D8D8'
-      case 'fighting': return '#C03028'
-      case 'poison': return '#A040A0'
-      case 'ground': return '#E0C068'
-      case 'flying': return '#A890F0'
-      case 'psychic': return '#F85888'
-      case 'bug': return '#A8B820'
-      case 'rock': return '#B8A038'
-      case 'ghost': return '#705898'
-      case 'dragon': return '#7038F8'
-      case 'dark': return '#705848'
-      case 'steel': return '#B8B8D0'
-      case 'fairy': return '#EE99AC'
-      default: return '#A8A878'
-    }
+  const resetAll = () => {
+    startTransition(() => {
+      setFilters({ search: '', type: '', generation: '', sortBy: 'id', sortOrder: 'asc' })
+    })
   }
 
   return (
-    <div className="space-y-8">
-      
-      {/* Premium Dashboard Filter Panel */}
-      <div className="bg-white dark:bg-slate-900/40 backdrop-blur-md p-6 rounded-3xl border border-slate-200/60 dark:border-white/10 shadow-sm dark:shadow-none space-y-6 text-slate-800 dark:text-white">
-        
-        {/* Search & Select dropdowns */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
-          {/* Search bar */}
-          <div className="md:col-span-4 relative">
-            <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-            </span>
+    <div className="space-y-6">
+
+      {/* ── Filter Panel ── */}
+      <div className="glass-panel rounded-2xl border border-border p-5 space-y-5">
+
+        {/* Row 1: Search + Sort */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+          {/* Search — 8 cols */}
+          <div className="md:col-span-8 relative">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             <input
               type="text"
-              placeholder="Search Pokémon by name..."
+              placeholder="Search by name or national number..."
               value={filters.search}
               onChange={(e) => handleFilterChange('search', e.target.value)}
-              className="w-full pl-10 pr-5 py-3 border rounded-2xl bg-slate-50 dark:bg-slate-950/40 text-slate-800 dark:text-white border-slate-200 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-all text-sm font-medium shadow-inner font-sans"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-background/50 text-foreground text-sm font-medium placeholder:text-muted-foreground focus:outline-none focus:border-brand-red focus:ring-1 focus:ring-brand-red/30 transition-all"
             />
           </div>
 
-          {/* Type Dropdown select (Custom Multi-select dropdown) */}
-          <div className="md:col-span-3 relative" ref={dropdownRef}>
-            <button
-              onClick={() => setIsTypeDropdownOpen(prev => !prev)}
-              type="button"
-              className="w-full px-5 py-3 border rounded-2xl bg-slate-50 dark:bg-slate-950/40 text-slate-800 dark:text-white border-slate-200 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-all text-sm font-medium shadow-inner font-sans flex items-center justify-between cursor-pointer"
-            >
-              <span className="truncate">
-                {selectedTypes.length === 0 
-                  ? 'All Types' 
-                  : `Types: ${selectedTypes.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(', ')}`}
-              </span>
-              <span className="text-slate-400 select-none ml-2">
-                {isTypeDropdownOpen ? '▲' : '▼'}
-              </span>
-            </button>
-
-            {isTypeDropdownOpen && (
-              <div className="absolute left-0 mt-2 w-[280px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/15 rounded-2xl shadow-2xl z-50 p-4">
-                <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-100 dark:border-white/5">
-                  <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                    Select 1 or 2 Types
-                  </span>
-                  {selectedTypes.length > 0 && (
-                    <button 
-                      onClick={() => handleFilterChange('type', '')}
-                      className="text-[10px] text-brand-red font-extrabold hover:underline"
-                    >
-                      Clear
-                    </button>
-                  )}
-                </div>
-
-                {/* 2-Column Grid with Checkboxes */}
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
-                  {ALL_TYPES.map((type) => {
-                    const isChecked = selectedTypes.includes(type)
-                    const typeColor = getTypeColor(type)
-                    const isDisabled = selectedTypes.length >= 2 && !isChecked
-
-                    return (
-                      <label 
-                        key={type} 
-                        className={`flex items-center gap-2 cursor-pointer text-xs font-semibold select-none capitalize ${
-                          isDisabled ? 'opacity-40 cursor-not-allowed' : 'hover:text-slate-950 dark:hover:text-white text-slate-600 dark:text-slate-300'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          disabled={isDisabled}
-                          onChange={() => handleTypeSelect(type)}
-                          className="w-3.5 h-3.5 rounded border-slate-300 dark:border-white/20 bg-white dark:bg-slate-950/50 text-brand-blue focus:ring-brand-blue/30 cursor-pointer disabled:cursor-not-allowed"
-                        />
-                        <span 
-                          className="w-2 h-2 rounded-full inline-block" 
-                          style={{ backgroundColor: typeColor }}
-                        />
-                        <span>{type}</span>
-                      </label>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Generation select */}
-          <div className="md:col-span-2">
+          {/* Sort — 4 cols */}
+          <div className="md:col-span-4 relative">
+            <ArrowUpDown className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             <select
-              value={filters.generation}
-              onChange={(e) => handleFilterChange('generation', e.target.value)}
-              className="w-full px-5 py-3 border rounded-2xl bg-slate-50 dark:bg-slate-950/40 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-all cursor-pointer text-sm font-medium shadow-inner font-sans"
-            >
-              <option className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white" value="">All Generations</option>
-              <option className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white" value="1">Gen 1 (Kanto)</option>
-              <option className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white" value="2">Gen 2 (Johto)</option>
-              <option className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white" value="3">Gen 3 (Hoenn)</option>
-              <option className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white" value="4">Gen 4 (Sinnoh)</option>
-              <option className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white" value="5">Gen 5 (Unova)</option>
-              <option className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white" value="6">Gen 6 (Kalos)</option>
-              <option className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white" value="7">Gen 7 (Alola)</option>
-              <option className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white" value="8">Gen 8 (Galar)</option>
-              <option className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white" value="9">Gen 9 (Paldea)</option>
-            </select>
-          </div>
-
-          {/* Sort By select */}
-          <div className="md:col-span-3">
-            <select
-              value={filters.sortBy === 'id' && filters.sortOrder === 'asc' ? 'id_asc' : filters.sortBy === 'id' && filters.sortOrder === 'desc' ? 'id_desc' : filters.sortBy === 'name' && filters.sortOrder === 'asc' ? 'name_asc' : filters.sortBy === 'name' && filters.sortOrder === 'desc' ? 'name_desc' : filters.sortBy}
+              value={currentSortKey}
               onChange={(e) => handleFilterChange('sortBy', e.target.value)}
-              className="w-full px-5 py-3 border rounded-2xl bg-slate-50 dark:bg-slate-950/40 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-all cursor-pointer text-sm font-medium shadow-inner font-sans"
+              className="w-full pl-10 pr-8 py-2.5 rounded-xl border border-border bg-background/50 text-foreground text-sm font-medium focus:outline-none focus:border-brand-red focus:ring-1 focus:ring-brand-red/30 transition-all appearance-none cursor-pointer"
             >
-              <option className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white" value="id_asc">ID (Lowest First)</option>
-              <option className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white" value="id_desc">ID (Highest First)</option>
-              <option className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white" value="name_asc">Alphabetical (A-Z)</option>
-              <option className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white" value="name_desc">Alphabetical (Z-A)</option>
-              <option className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white" value="hp">Highest HP</option>
-              <option className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white" value="attack">Highest Attack</option>
-              <option className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white" value="defense">Highest Defense</option>
-              <option className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white" value="speed">Highest Speed</option>
+              {SORT_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
             </select>
           </div>
         </div>
 
+        {/* Row 2: Generation filter pills */}
+        <div className="space-y-2">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Generations:</span>
+          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+            {GENERATIONS.map((gen) => {
+              const isActive = filters.generation === gen.value
+              return (
+                <button
+                  key={gen.value}
+                  onClick={() => handleFilterChange('generation', gen.value)}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all duration-200 shrink-0 ${
+                    isActive
+                      ? 'text-white border border-transparent'
+                      : 'border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30'
+                  }`}
+                  style={isActive ? { backgroundColor: BRAND, borderColor: BRAND } : {}}
+                >
+                  {gen.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Row 3: Type filter pills */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              Elemental Filter (Select up to 2):
+            </span>
+            {selectedTypes.length > 0 && (
+              <button
+                onClick={() => handleFilterChange('type', '')}
+                className="text-[10px] font-bold uppercase tracking-wider transition-colors"
+                style={{ color: BRAND }}
+              >
+                Reset Types
+              </button>
+            )}
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {ALL_TYPES.map((type) => {
+              const isSelected = selectedTypes.includes(type)
+              const isDisabled = selectedTypes.length >= 2 && !isSelected
+              const typeColor = getTypeColor(type)
+              return (
+                <button
+                  key={type}
+                  onClick={() => !isDisabled && handleTypeSelect(type)}
+                  disabled={isDisabled}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold capitalize transition-all duration-200 ${
+                    isDisabled ? 'opacity-25 cursor-not-allowed' : 'cursor-pointer'
+                  }`}
+                  style={isSelected
+                    ? { backgroundColor: typeColor, color: '#fff', border: `1px solid ${typeColor}` }
+                    : { border: '1px solid var(--border)', color: 'var(--muted-foreground)' }
+                  }
+                >
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ backgroundColor: typeColor }}
+                  />
+                  {type}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Stat sort notice */}
+        {isSortingByStat && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
+            <RefreshCw className="w-3 h-3 animate-spin" />
+            <span>Sorting by stat — loading batch details from database…</span>
+          </div>
+        )}
+
+        {/* Results count */}
+        {!isLoading && (
+          <div className="text-xs text-muted-foreground font-semibold flex items-center justify-between">
+            <span>
+              Showing <span className="text-foreground font-bold">{pokemonList.length}</span> of{' '}
+              <span className="text-foreground font-bold">{total}</span> Pokémon
+            </span>
+            {(filters.search || filters.type || filters.generation) && (
+              <button onClick={resetAll} className="text-xs font-bold transition-colors" style={{ color: BRAND }}>
+                Reset Filters
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Main Grid */}
+      {/* ── Grid ── */}
       {isLoading || isPending ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
           {[...Array(12)].map((_, i) => (
-            <Skeleton key={i} className="h-64 rounded-3xl bg-white dark:bg-slate-900/60 border border-slate-200/60 dark:border-white/5" />
+            <Skeleton key={i} className="h-56 rounded-2xl border border-border" />
           ))}
         </div>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          {pokemonList.map((pokemon: Pokemon) => {
-            const primaryType = pokemon.types[0] || 'normal'
-            const typeColor = getTypeColor(primaryType)
-
-            return (
-              <Link key={pokemon.id} href={`/pokemon/${pokemon.id}`}>
-                <div 
-                  className="relative rounded-3xl p-4 flex flex-col items-center justify-between text-center transition-all duration-300 cursor-pointer h-full border select-none overflow-hidden group bg-white/80 dark:bg-slate-900/60 backdrop-blur-md shadow-3xs hover:shadow-md"
-                  style={{ 
-                    borderColor: `${typeColor}20`,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = typeColor
-                    e.currentTarget.style.boxShadow = `0 0 20px ${typeColor}30`
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = `${typeColor}20`
-                    e.currentTarget.style.boxShadow = 'none'
-                  }}
-                >
-                  {/* Top card info overlay */}
-                  <div className="w-full flex justify-between items-center mb-2 z-10">
-                    <span className="text-[9px] font-extrabold uppercase bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded">
-                      Gen {pokemon.generation}
-                    </span>
-                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 font-mono">
-                      #{String(pokemon.id).padStart(4, '0')}
-                    </span>
-                  </div>
-
-                  {/* Artwork Image with group-hover animation */}
-                  <div className="w-24 h-24 relative flex items-center justify-center mb-3 z-10">
-                    {pokemon.imageUrl ? (
-                      <Image
-                        src={pokemon.imageUrl}
-                        alt={pokemon.name}
-                        width={84}
-                        height={84}
-                        className="object-contain drop-shadow-md select-none pointer-events-none group-hover:scale-110 transition-transform duration-300"
-                      />
-                    ) : (
-                      <span className="text-xs text-slate-450 dark:text-slate-400">No Image</span>
-                    )}
-                  </div>
-
-                  {/* Name */}
-                  <h3 className="text-sm font-extrabold text-slate-800 dark:text-white capitalize mb-3 tracking-normal z-10 group-hover:text-brand-red transition-colors">
-                    {pokemon.name}
-                  </h3>
-
-                  {/* Type Badges */}
-                  <div className="flex gap-1.5 justify-center flex-wrap z-10">
-                    {pokemon.types.map((type) => (
-                      <span
-                        key={type}
-                        className="px-2.5 py-0.5 text-[9px] rounded-full font-extrabold uppercase tracking-wider text-white select-none shadow-sm"
-                        style={{ backgroundColor: getTypeColor(type) }}
-                      >
-                        {type}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </Link>
-            )
-          })}
+      ) : pokemonList.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 border border-dashed border-border rounded-2xl gap-4 text-center">
+          <p className="text-muted-foreground text-sm font-semibold">No entries found matching filters.</p>
+          <button
+            onClick={resetAll}
+            className="px-5 py-2 rounded-xl text-sm font-bold text-white"
+            style={{ backgroundColor: BRAND }}
+          >
+            Reset Filters
+          </button>
         </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {pokemonList.map((pokemon: Pokemon, index: number) => {
+              const primaryType = pokemon.types[0] || 'normal'
+              const typeColor = getTypeColor(primaryType)
+              const isEager = index < 12
+              const genRoman = GEN_ROMAN[String(pokemon.generation)] || String(pokemon.generation)
+
+              return (
+                <Link key={pokemon.id} href={`/pokemon/${pokemon.id}`} className="group block">
+                  <div
+                    className="relative rounded-2xl p-4 flex flex-col items-center text-center transition-all duration-300 cursor-pointer h-full border select-none overflow-hidden bg-card"
+                    style={{ borderColor: `${typeColor}25` }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = typeColor
+                      e.currentTarget.style.transform = 'translateY(-5px)'
+                      e.currentTarget.style.boxShadow = `0 12px 32px ${typeColor}35`
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = `${typeColor}25`
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = 'none'
+                    }}
+                  >
+                    {/* Top row */}
+                    <div className="w-full flex justify-between items-center mb-2">
+                      <span className="text-[9px] font-extrabold uppercase text-muted-foreground">
+                        Gen {genRoman}
+                      </span>
+                      <span className="text-[10px] font-bold text-muted-foreground font-fira">
+                        #{String(pokemon.id).padStart(4, '0')}
+                      </span>
+                    </div>
+
+                    {/* Artwork */}
+                    <div className="w-24 h-24 relative flex items-center justify-center mb-3 rounded-xl"
+                      style={{ backgroundColor: `${typeColor}12` }}>
+                      {/* Subtle oval shadow */}
+                      <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-16 h-3 rounded-full blur-md opacity-25"
+                        style={{ backgroundColor: typeColor }} />
+                      {pokemon.imageUrl ? (
+                        <Image
+                          src={pokemon.imageUrl}
+                          alt={pokemon.name}
+                          width={88}
+                          height={88}
+                          priority={isEager}
+                          loading={isEager ? 'eager' : 'lazy'}
+                          sizes="(max-width: 640px) 50vw, 16vw"
+                          className="w-20 h-20 object-contain drop-shadow-md select-none pointer-events-none group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <span className="text-xs text-muted-foreground">No Image</span>
+                      )}
+                    </div>
+
+                    {/* Name */}
+                    <h3
+                      className="text-sm font-extrabold capitalize mb-2 tracking-normal truncate w-full text-foreground transition-colors duration-200 group-hover:text-brand-red"
+                    >
+                      {pokemon.name}
+                    </h3>
+
+                    {/* Type badges */}
+                    <div className="flex gap-1 justify-center flex-wrap">
+                      {pokemon.types.map((type) => (
+                        <span
+                          key={type}
+                          className="px-2.5 py-0.5 rounded-full text-[8.5px] font-black uppercase tracking-wider text-white"
+                          style={{ backgroundColor: getTypeColor(type) }}
+                        >
+                          {type}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+
+          {/* Infinite scroll sentinel */}
+          <div ref={loadMoreRef} className="flex flex-col items-center gap-3 py-6">
+            {isFetchingNextPage && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 w-full">
+                {[...Array(6)].map((_, i) => (
+                  <Skeleton key={i} className="h-56 rounded-2xl border border-border" />
+                ))}
+              </div>
+            )}
+            {hasNextPage && !isFetchingNextPage && (
+              <button
+                onClick={() => fetchNextPage()}
+                className="px-8 py-2.5 rounded-xl text-sm font-bold border border-border text-foreground hover:bg-muted/30 transition-all"
+              >
+                Load More Pokémon
+              </button>
+            )}
+            {!hasNextPage && pokemonList.length > 0 && (
+              <p className="text-xs text-muted-foreground font-semibold">
+                All {total} Pokémon loaded ✓
+              </p>
+            )}
+          </div>
+        </>
       )}
     </div>
   )

@@ -7,9 +7,12 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
   --font-sans: var(--font-plus-jakarta-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: var(--font-geist-mono), monospace;
-  --font-heading: var(--font-outfit), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: var(--font-fira-code), var(--font-geist-mono), monospace;
+  --font-display: var(--font-outfit), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  /* Shadcn token mappings */
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -47,177 +50,261 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
 
-  --color-pokemon-fire: #F08030;
-  --color-pokemon-water: #6890F0;
-  --color-pokemon-grass: #78C850;
-  --color-pokemon-electric: #F7D02C;
-  --color-pokemon-ice: #98D8D8;
-  --color-pokemon-fighting: #C03028;
-  --color-pokemon-poison: #A040A0;
-  --color-pokemon-ground: #E0C068;
-
-  --color-brand-red: #ff3e3e;
+  /* === ROTOMDEX DESIGN SYSTEM TOKENS === */
+  /* Accent — vivid Pokéball red-orange */
+  --color-brand-red: oklch(0.55 0.28 29.5);
+  --color-brand-red-light: oklch(0.60 0.25 29.5);
+  --color-brand-red-dark: oklch(0.48 0.27 29.5);
   --color-brand-blue: #3b82f6;
-  --color-bg-pokedex: var(--bg-pokedex);
-  --color-surface-pokedex: var(--surface-pokedex);
-  --color-surface-container-pokedex: var(--surface-container-pokedex);
-  --color-text-pokedex: var(--text-pokedex);
+
+  /* Dark mode surfaces */
+  --color-brand-dark-bg: oklch(0.10 0.015 270);
+  --color-brand-dark-card: oklch(0.14 0.018 270);
+  --color-brand-dark-border: oklch(0.25 0.02 270);
+  --color-brand-dark-text: oklch(0.97 0.01 270);
+  --color-brand-dark-muted: oklch(0.70 0.015 270);
+  --color-brand-slate-dark: oklch(0.10 0.015 270);
+
+  /* Type colors */
+  --color-type-normal: #A8A878;
+  --color-type-fire: #F08030;
+  --color-type-water: #6890F0;
+  --color-type-grass: #78C850;
+  --color-type-electric: #F7D02C;
+  --color-type-ice: #98D8D8;
+  --color-type-fighting: #C03028;
+  --color-type-poison: #A040A0;
+  --color-type-ground: #E0C068;
+  --color-type-flying: #A890F0;
+  --color-type-psychic: #F85888;
+  --color-type-bug: #A8B820;
+  --color-type-rock: #B8A038;
+  --color-type-ghost: #705898;
+  --color-type-dragon: #7038F8;
+  --color-type-dark: #705848;
+  --color-type-steel: #B8B8D0;
+  --color-type-fairy: #EE99AC;
 }
 
+/* ===== LIGHT MODE ===== */
 :root {
-  --background: oklch(0.985 0.01 240);
-  --foreground: oklch(0.145 0.02 240);
-  --card: oklch(1 0 0 / 75%);
-  --card-foreground: oklch(0.145 0.02 240);
+  --background: oklch(0.98 0.005 270);
+  --foreground: oklch(0.15 0.02 270);
+  --card: oklch(1 0 0 / 90%);
+  --card-foreground: oklch(0.15 0.02 270);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0.02 240);
-  --primary: oklch(0.205 0.02 240);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0.01 240);
-  --secondary-foreground: oklch(0.205 0.02 240);
-  --muted: oklch(0.97 0.01 240);
-  --muted-foreground: oklch(0.556 0.02 240);
-  --accent: oklch(0.97 0.01 240);
-  --accent-foreground: oklch(0.205 0.02 240);
+  --popover-foreground: oklch(0.15 0.02 270);
+  --primary: oklch(0.55 0.28 29.5);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.96 0.01 270);
+  --secondary-foreground: oklch(0.20 0.02 270);
+  --muted: oklch(0.96 0.01 270);
+  --muted-foreground: oklch(0.55 0.02 270);
+  --accent: oklch(0.96 0.01 270);
+  --accent-foreground: oklch(0.20 0.02 270);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: rgba(0, 0, 0, 0.08);
-  --input: rgba(0, 0, 0, 0.06);
-  --ring: oklch(0.708 0.02 240);
+  --border: oklch(0.88 0.01 270);
+  --input: oklch(0.92 0.01 270);
+  --ring: oklch(0.55 0.28 29.5);
   --radius: 1rem;
-  --sidebar: oklch(0.985 0.01 240);
-  --sidebar-foreground: oklch(0.145 0.02 240);
-  --sidebar-primary: oklch(0.205 0.02 240);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0.01 240);
-  --sidebar-accent-foreground: oklch(0.205 0.02 240);
-  --sidebar-border: rgba(0, 0, 0, 0.08);
-  --sidebar-ring: oklch(0.708 0.02 240);
-
-  --bg-pokedex: #f7f9fd;
-  --surface-pokedex: rgba(255, 255, 255, 0.75);
-  --surface-container-pokedex: rgba(241, 245, 249, 0.6);
-  --text-pokedex: #1e293b;
+  --sidebar: oklch(0.98 0.005 270);
+  --sidebar-foreground: oklch(0.15 0.02 270);
+  --sidebar-primary: oklch(0.55 0.28 29.5);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.96 0.01 270);
+  --sidebar-accent-foreground: oklch(0.20 0.02 270);
+  --sidebar-border: oklch(0.88 0.01 270);
+  --sidebar-ring: oklch(0.55 0.28 29.5);
+  --silhouette-bg: radial-gradient(circle, oklch(0.92 0.03 250) 0%, oklch(0.82 0.02 270) 100%);
 }
 
+/* ===== DARK MODE ===== */
 .dark {
-  --background: oklch(0.08 0.02 240);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.12 0.02 240 / 70%);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.12 0.02 240);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --background: oklch(0.10 0.015 270);
+  --foreground: oklch(0.97 0.01 270);
+  --card: oklch(0.14 0.018 270 / 80%);
+  --card-foreground: oklch(0.97 0.01 270);
+  --popover: oklch(0.14 0.018 270);
+  --popover-foreground: oklch(0.97 0.01 270);
+  --primary: oklch(0.55 0.28 29.5);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.20 0.02 270);
+  --secondary-foreground: oklch(0.97 0.01 270);
+  --muted: oklch(0.20 0.02 270);
+  --muted-foreground: oklch(0.70 0.015 270);
+  --accent: oklch(0.20 0.02 270);
+  --accent-foreground: oklch(0.97 0.01 270);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: rgba(255, 255, 255, 0.08);
-  --input: rgba(255, 255, 255, 0.1);
-  --ring: oklch(0.556 0 0);
-  --sidebar: oklch(0.12 0.02 240);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.922 0 0);
-  --sidebar-primary-foreground: oklch(0.205 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: rgba(255, 255, 255, 0.08);
-  --sidebar-ring: oklch(0.556 0 0);
-
-  --bg-pokedex: #080a15;
-  --surface-pokedex: rgba(22, 28, 45, 0.7);
-  --surface-container-pokedex: rgba(30, 41, 59, 0.4);
-  --text-pokedex: #f8fafc;
+  --border: oklch(0.25 0.02 270);
+  --input: oklch(0.20 0.02 270);
+  --ring: oklch(0.60 0.25 29.5);
+  --sidebar: oklch(0.14 0.018 270);
+  --sidebar-foreground: oklch(0.97 0.01 270);
+  --sidebar-primary: oklch(0.55 0.28 29.5);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.20 0.02 270);
+  --sidebar-accent-foreground: oklch(0.97 0.01 270);
+  --sidebar-border: oklch(0.25 0.02 270);
+  --sidebar-ring: oklch(0.60 0.25 29.5);
+  --silhouette-bg: radial-gradient(circle, oklch(0.30 0.08 250) 0%, oklch(0.12 0.015 270) 100%);
 }
 
+/* ===== BASE LAYER ===== */
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
   body {
     @apply text-foreground font-sans;
-    background-color: var(--color-bg-pokedex);
-    background-image: 
-      radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, rgba(239, 68, 68, 0.06) 0px, transparent 50%),
-      radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.04) 0px, transparent 50%);
+    background-color: var(--background);
+    background-image:
+      radial-gradient(at 0% 0%, oklch(0.55 0.28 29.5 / 0.06) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, oklch(0.60 0.25 29.5 / 0.04) 0px, transparent 50%),
+      radial-gradient(at 50% 100%, oklch(0.55 0.15 200 / 0.04) 0px, transparent 50%);
     background-attachment: fixed;
     background-size: cover;
     transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+    min-height: 100vh;
   }
   html {
     @apply font-sans;
   }
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-heading), sans-serif;
+    font-family: var(--font-display), sans-serif;
   }
   select, option, input, textarea, button {
     font-family: var(--font-sans), sans-serif !important;
   }
 }
 
-.logo-rotom {
-  font-family: var(--font-luckiest-guy), cursive;
-  text-transform: uppercase;
-  color: #ffcb05; /* Solid Pokémon Yellow */
-  text-shadow: 
-    -2px -2px 0 #3c5aa6,  
-     2px -2px 0 #3c5aa6,
-    -2px  2px 0 #3c5aa6,
-     2px  2px 0 #3c5aa6,
-    -2px  0px 0 #3c5aa6,
-     2px  0px 0 #3c5aa6,
-     0px -2px 0 #3c5aa6,
-     0px  2px 0 #3c5aa6,
-     3px  3px 0px #1c2d5a; /* Outer drop shadow */
-  letter-spacing: 0.05em;
-  display: inline-block;
-  transform: skewX(-6deg);
-  font-size: 1.6rem;
-  line-height: 1.2;
+/* ===== GLASS PANEL UTILITY ===== */
+.glass-panel {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.75);
+}
+.dark .glass-panel {
+  background: oklch(0.14 0.018 270 / 0.8);
 }
 
-.logo-dex {
-  font-family: var(--font-luckiest-guy), cursive;
-  text-transform: uppercase;
-  color: #ffcb05; /* Solid Pokémon Yellow */
-  text-shadow: 
-    -2px -2px 0 #3c5aa6,  
-     2px -2px 0 #3c5aa6,
-    -2px  2px 0 #3c5aa6,
-     2px  2px 0 #3c5aa6,
-    -2px  0px 0 #3c5aa6,
-     2px  0px 0 #3c5aa6,
-     0px -2px 0 #3c5aa6,
-     0px  2px 0 #3c5aa6,
-     3px  3px 0px #1c2d5a; /* Outer drop shadow */
-   letter-spacing: 0.05em;
-  display: inline-block;
-  transform: skewX(-6deg);
-  font-size: 1.6rem;
-  line-height: 1.2;
+/* ===== MARQUEE / TICKER ===== */
+@keyframes ticker {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.animate-ticker {
+  animation: ticker 30s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-ticker {
+    animation: none;
+  }
 }
 
-/* Custom premium scrollbar utility */
+/* ===== POKÉBALL ANIMATIONS ===== */
+@keyframes pokeball-orb-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.75); }
+}
+.animate-pokeball-pulse {
+  animation: pokeball-orb-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.animate-spin-slow {
+  animation: spin-slow 40s linear infinite;
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+.animate-float-slow {
+  animation: float-slow 4s ease-in-out infinite;
+}
+
+/* ===== STAT BAR ANIMATION ===== */
+@keyframes stat-bar-grow {
+  from { width: 0; }
+  to { width: var(--bar-width, 0%); }
+}
+.animate-stat-bar {
+  animation: stat-bar-grow 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ===== SCROLLBAR ===== */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 5px;
+  width: 4px;
+  height: 4px;
 }
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.35); /* Slate-400 equivalent */
+  background: oklch(0.70 0.02 270 / 0.4);
   border-radius: 9999px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(156, 163, 175, 0.6);
+  background: oklch(0.70 0.02 270 / 0.7);
 }
 .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
+  background: oklch(0.40 0.02 270 / 0.5);
 }
 .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: oklch(0.55 0.28 29.5 / 0.6);
+}
+
+/* ===== NO-SCROLLBAR UTILITY ===== */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ===== FONT DISPLAY UTILITY ===== */
+.font-display {
+  font-family: var(--font-display), sans-serif;
+}
+.font-fira {
+  font-family: var(--font-fira-code), var(--font-geist-mono), monospace;
+}
+
+/* ===== TAB BOTTOM BORDER ACTIVE ===== */
+.tab-active {
+  border-bottom: 2px solid oklch(0.55 0.28 29.5);
+  color: oklch(0.55 0.28 29.5);
+}
+
+/* ===== GRADIENT MASKS (ticker edges) ===== */
+.ticker-container {
+  position: relative;
+  overflow: hidden;
+}
+.ticker-container::before,
+.ticker-container::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 80px;
+  z-index: 10;
+  pointer-events: none;
+}
+.ticker-container::before {
+  left: 0;
+  background: linear-gradient(to right, var(--background), transparent);
+}
+.ticker-container::after {
+  right: 0;
+  background: linear-gradient(to left, var(--background), transparent);
+}
+
+/* ===== SELECTION ===== */
+::selection {
+  background: oklch(0.55 0.28 29.5 / 0.25);
+  color: oklch(0.15 0.02 270);
+}
+.dark ::selection {
+  background: oklch(0.55 0.28 29.5 / 0.35);
+  color: oklch(0.97 0.01 270);
 }

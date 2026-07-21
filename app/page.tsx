@@ -1,15 +1,10 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { Logo } from '@/components/Logo'
-import { ThemeToggle } from '@/components/ThemeToggle'
-import { 
-  SlidersHorizontal, 
-  Swords, 
-  Shield, 
-  RotateCw,
-  Trophy
+import {
+  Trophy, RotateCw, CheckCircle2, XCircle, Play,
+  BookOpen, Swords, Users, HelpCircle, ChevronRight
 } from 'lucide-react'
 
 interface GamePokemon {
@@ -17,42 +12,49 @@ interface GamePokemon {
   id: number
 }
 
+const BRAND = 'oklch(0.55 0.28 29.5)'
+const BRAND_DARK = 'oklch(0.48 0.27 29.5)'
+
+const TICKER_ITEMS = [
+  { label: 'Pokémon Available', value: '1,025' },
+  { label: 'Elemental Types', value: '18' },
+  { label: 'Generations Covered', value: 'Gen 1–9' },
+  { label: 'Responsive Layout', value: '100%' },
+  { label: 'Type Weakness Math', value: 'Dynamic' },
+  { label: 'Database Status', value: 'Operational' },
+]
+
 export default function HomePage() {
   const [fullList, setFullList] = useState<GamePokemon[]>([])
   const [target, setTarget] = useState<GamePokemon | null>(null)
   const [options, setOptions] = useState<string[]>([])
   const [selectedGuess, setSelectedGuess] = useState<string | null>(null)
   const [streak, setStreak] = useState<number>(0)
-  
-  // Anti-flash state
   const [imageLoaded, setImageLoaded] = useState<boolean>(false)
   const [loading, setLoading] = useState<boolean>(true)
+  const gameRef = useRef<HTMLDivElement>(null)
+
+  // Load streak from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('rotomdex_game_streak')
+    if (saved) setStreak(Number(saved))
+  }, [])
+
+  // Save streak
+  useEffect(() => {
+    localStorage.setItem('rotomdex_game_streak', String(streak))
+  }, [streak])
 
   useEffect(() => {
-    async function loadAllPokemon() {
+    async function loadGameData() {
       try {
-        const res = await fetch('https://pokeapi.co/api/v2/pokemon?limit=1025')
+        const res = await fetch('/api/pokemon/names')
         if (res.ok) {
-          const data = await res.json()
-          const formatted = data.results.map((p: any, idx: number) => ({
-            name: p.name,
-            id: idx + 1
-          }))
+          const formatted = await res.json()
           setFullList(formatted)
-          
-          // Setup first target
-          const targetItem = formatted[Math.floor(Math.random() * formatted.length)]
-          setTarget(targetItem)
-          setSelectedGuess(null)
-          setImageLoaded(false)
-
-          const choices = new Set<string>()
-          choices.add(targetItem.name)
-          while (choices.size < 4) {
-            const randomOpt = formatted[Math.floor(Math.random() * formatted.length)].name
-            choices.add(randomOpt)
+          if (formatted.length > 0) {
+            initRound(formatted)
           }
-          setOptions(Array.from(choices).sort(() => Math.random() - 0.5))
         }
       } catch (err) {
         console.error(err)
@@ -60,28 +62,29 @@ export default function HomePage() {
         setLoading(false)
       }
     }
-    loadAllPokemon()
+    loadGameData()
   }, [])
 
-  const generateNewRound = () => {
-    if (fullList.length === 0) return
-    setImageLoaded(false)
-    const randomTarget = fullList[Math.floor(Math.random() * fullList.length)]
-    setTarget(randomTarget)
+  function initRound(list: GamePokemon[]) {
+    const targetItem = list[Math.floor(Math.random() * list.length)]
+    setTarget(targetItem)
     setSelectedGuess(null)
-
+    setImageLoaded(false)
     const choices = new Set<string>()
-    choices.add(randomTarget.name)
-    while (choices.size < 4) {
-      const randomOpt = fullList[Math.floor(Math.random() * fullList.length)].name
-      choices.add(randomOpt)
+    choices.add(targetItem.name)
+    while (choices.size < Math.min(4, list.length)) {
+      choices.add(list[Math.floor(Math.random() * list.length)].name)
     }
     setOptions(Array.from(choices).sort(() => Math.random() - 0.5))
   }
 
+  const generateNewRound = () => {
+    if (fullList.length === 0) return
+    initRound(fullList)
+  }
+
   const handleGuess = (guess: string) => {
     if (selectedGuess !== null || !target) return
-
     setSelectedGuess(guess)
     if (guess === target.name) {
       setStreak(prev => prev + 1)
@@ -94,277 +97,330 @@ export default function HomePage() {
   const guessedCorrectly = target && selectedGuess === target.name
 
   return (
-    <div className="min-h-screen flex flex-col text-slate-800 dark:text-slate-100 font-sans selection:bg-brand-red selection:text-white">
-      {/* TopNavBar */}
-      <nav className="sticky top-0 w-full h-[72px] z-50 bg-white/80 dark:bg-slate-950/40 backdrop-blur-md border-b border-slate-200/60 dark:border-white/5">
-        <div className="flex justify-between items-center px-6 w-full max-w-7xl mx-auto h-full">
-          <Logo />
-          <ul className="hidden md:flex gap-6 h-full items-center">
-            <li className="h-full flex items-center">
-              <Link className="text-sm text-brand-red font-bold border-b-2 border-brand-red h-full flex items-center" href="/">Home</Link>
-            </li>
-            <li className="h-full flex items-center">
-              <Link className="text-sm text-slate-600 dark:text-slate-300 hover:text-brand-red font-semibold transition-colors h-full flex items-center" href="/pokedex">Pokédex</Link>
-            </li>
-            <li className="h-full flex items-center">
-              <Link className="text-sm text-slate-600 dark:text-slate-300 hover:text-brand-red font-semibold transition-colors h-full flex items-center" href="/compare">Compare</Link>
-            </li>
-            <li className="h-full flex items-center">
-              <Link className="text-sm text-slate-600 dark:text-slate-300 hover:text-brand-red font-semibold transition-colors h-full flex items-center" href="/teams">Teams</Link>
-            </li>
-            <li className="h-full flex items-center">
-              <Link className="text-sm text-slate-600 dark:text-slate-300 hover:text-brand-red font-semibold transition-colors h-full flex items-center" href="/about">About</Link>
-            </li>
-          </ul>
-          <div className="flex items-center gap-3">
-            <ThemeToggle />
-            <Link 
+    <div className="min-h-screen">
+      <div className="max-w-7xl mx-auto w-full px-4 md:px-8 py-10 space-y-14">
+
+        {/* ══ HERO ══ */}
+        <section className="text-center space-y-6 pt-4">
+          {/* Status Pill */}
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-border glass-panel">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: BRAND }} />
+              <span className="relative inline-flex rounded-full h-2 w-2" style={{ backgroundColor: BRAND }} />
+            </span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">RotomDex Active</span>
+          </div>
+
+          {/* H1 */}
+          <h1 className="font-display font-black text-4xl sm:text-5xl md:text-6xl leading-tight tracking-tight text-foreground">
+            The Next Gen Tactical{' '}
+            <br className="hidden sm:block" />
+            <span style={{ color: BRAND }}>Pokédex &amp; Arena</span> Dashboard
+          </h1>
+
+          {/* Subtitle */}
+          <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed font-medium">
+            Real-time stats lookup, custom BST breakdowns, damage multipliers,
+            dual combatant simulation, and synergy audits across all 1,025 Pokémon.
+          </p>
+
+          {/* CTAs */}
+          <div className="flex items-center justify-center gap-4 flex-wrap">
+            <Link
               href="/pokedex"
-              className="text-xs font-extrabold bg-brand-red hover:bg-red-600 text-white px-5 py-2.5 rounded-full transition-all shadow-md"
+              className="inline-flex items-center gap-2 px-7 py-3 rounded-xl font-bold text-sm text-white shadow-lg transition-all duration-200 hover:-translate-y-0.5 active:scale-95"
+              style={{ background: `linear-gradient(135deg, ${BRAND}, ${BRAND_DARK})`, boxShadow: `0 8px 24px ${BRAND}40` }}
             >
+              <Play className="w-4 h-4 fill-white" />
               Launch Database
             </Link>
+            <button
+              onClick={() => gameRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+              className="inline-flex items-center gap-2 px-7 py-3 rounded-xl font-bold text-sm border border-border text-foreground glass-panel transition-all duration-200 hover:bg-muted/30 active:scale-95"
+            >
+              Play Mini-Game
+            </button>
+          </div>
+        </section>
+
+        {/* ══ STATS TICKER ══ */}
+        <div className="ticker-container rounded-2xl border border-border glass-panel py-4 select-none">
+          <div className="flex animate-ticker whitespace-nowrap" style={{ width: 'max-content' }}>
+            {[...TICKER_ITEMS, ...TICKER_ITEMS].map((item, i) => (
+              <span key={i} className="inline-flex items-center gap-2 px-6 text-sm">
+                <span className="text-muted-foreground font-semibold">{item.label}:</span>
+                <span className="font-black" style={{ color: BRAND }}>{item.value}</span>
+                {i < (TICKER_ITEMS.length * 2) - 1 && (
+                  <span className="text-muted-foreground ml-4 opacity-40">•</span>
+                )}
+              </span>
+            ))}
           </div>
         </div>
-      </nav>
 
-      {/* Main Container */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-12 space-y-16">
-        
-        {/* HERO SECTION: Who's That Pokémon Interactive Mini-Game */}
-        <section className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center pt-4">
-          
-          {/* Left Hero Column: Typography & CTAs */}
-          <div className="lg:col-span-6 space-y-6">
-            <span className="bg-brand-red/10 text-brand-red font-mono text-[10px] uppercase tracking-widest px-4 py-1.5 rounded-full font-bold border border-brand-red/20 inline-block font-sans">
-              ROTOMDEX ENTERTAINMENT MODULE
-            </span>
-            <h1 className="text-4xl sm:text-6xl font-black text-slate-900 dark:text-white tracking-normal leading-tight">
-              Explore Pokémon <br />
-              With <span className="text-brand-red">High Fidelity</span>
-            </h1>
-            <p className="text-slate-600 dark:text-slate-300 text-sm sm:text-base leading-relaxed font-medium max-w-xl">
-              A premium dashboard for evaluating base stat matrices, calculating elemental type matchups, and drafting tactical squad options.
+        {/* ══ MINI-GAME: Interactive Scanner ══ */}
+        <section ref={gameRef} className="space-y-4">
+          <div className="text-center space-y-1">
+            <h2 className="font-display font-black text-2xl md:text-3xl text-foreground">
+              Interactive Scanner Subsystem
+            </h2>
+            <p className="text-sm text-muted-foreground font-medium">
+              Identify the silhouette — test your Pokémon recognition skills
             </p>
-
-            <div className="flex gap-4">
-              <Link 
-                href="/pokedex"
-                className="px-6 py-3 bg-brand-red hover:bg-red-600 text-white font-extrabold text-xs rounded-xl shadow-md hover:scale-105 active:scale-98 transition-all"
-              >
-                Launch Pokédex
-              </Link>
-              <Link 
-                href="/compare"
-                className="px-6 py-3 bg-white dark:bg-slate-900/60 hover:bg-slate-50 dark:hover:bg-slate-800/80 text-slate-700 dark:text-slate-200 font-extrabold text-xs rounded-xl border border-slate-200 dark:border-white/10 transition-all"
-              >
-                Compare Tool
-              </Link>
-            </div>
           </div>
 
-          {/* Right Hero Column: Who's That Pokémon Game Container */}
-          <div className="lg:col-span-6 flex flex-col">
-            <div className="bg-white dark:bg-slate-900/40 backdrop-blur-md rounded-3xl p-6 border border-slate-200/60 dark:border-white/10 shadow-xl shadow-slate-100 dark:shadow-none relative overflow-hidden flex flex-col justify-between h-[480px]">
-              
-              {/* Header block with Streak Counter */}
-              <div className="flex justify-between items-center border-b border-slate-100 dark:border-white/5 pb-3">
-                <span className="text-[10px] font-black text-slate-900 dark:text-white font-mono tracking-widest">
-                  WHO'S THAT POKÉMON?
+          <div className="glass-panel rounded-3xl border border-border shadow-xl overflow-hidden">
+            {/* Top bar */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <div className="flex items-center gap-2.5">
+                <Trophy className="w-5 h-5 text-amber-400" />
+                <span className="text-sm font-bold text-muted-foreground">Streak Counter:</span>
+                <span
+                  className="px-3 py-0.5 rounded-full text-xs font-black text-white"
+                  style={{ backgroundColor: streak > 0 ? '#f59e0b' : 'oklch(0.30 0.02 270)' }}
+                >
+                  {streak}
                 </span>
-                <div className="flex items-center gap-1.5 bg-brand-red/10 text-brand-red px-2.5 py-0.5 rounded-full border border-brand-red/20 font-mono text-[10px] font-bold">
-                  <Trophy className="w-3.5 h-3.5" />
-                  <span>STREAK: {streak}</span>
-                </div>
               </div>
+              <button
+                onClick={() => setStreak(0)}
+                className="text-xs font-bold text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Reset Streak
+              </button>
+            </div>
 
-              {/* Silhouette / Answer Artwork Frame */}
-              <div className="flex-1 flex flex-col items-center justify-center min-h-[170px] relative select-none">
-                <div className="absolute inset-0 bg-radial from-slate-100 to-transparent dark:from-slate-800/20 opacity-70 pointer-events-none rounded-2xl" />
-                
+            <div className="p-6 space-y-5">
+              {/* Silhouette display */}
+              <div
+                className="relative aspect-video max-h-72 rounded-2xl overflow-hidden flex items-center justify-center mx-auto"
+                style={{ background: 'var(--silhouette-bg)' }}
+              >
                 {loading ? (
-                  <div className="flex flex-col items-center gap-2">
-                    <RotateCw className="w-8 h-8 text-brand-red animate-spin" />
-                    <span className="text-[10px] font-black text-slate-450 uppercase tracking-wider animate-pulse">Initializing OS Module...</span>
+                  <div className="flex flex-col items-center gap-3">
+                    <RotateCw className="w-8 h-8 animate-spin" style={{ color: BRAND }} />
+                    <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground animate-pulse">
+                      Loading Database...
+                    </span>
                   </div>
-                ) : (
-                  target && (
-                    <img 
+                ) : target ? (
+                  <>
+                    {!imageLoaded && (
+                      <RotateCw className="absolute w-8 h-8 animate-spin text-muted-foreground" />
+                    )}
+                    <img
                       src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${target.id}.png`}
                       alt="Who's That Pokémon?"
                       onLoad={() => setImageLoaded(true)}
-                      className={`w-36 h-36 object-contain transition-all duration-300 select-none pointer-events-none ${
+                      className={`h-52 object-contain transition-all duration-700 select-none pointer-events-none drop-shadow-2xl ${
                         imageLoaded ? 'opacity-100' : 'opacity-0'
-                      } ${
-                        roundOver ? 'brightness-100 contrast-100' : 'brightness-0 contrast-0'
-                      }`}
+                      } ${roundOver ? '' : 'brightness-0'}`}
                     />
-                  )
-                )}
+                  </>
+                ) : null}
               </div>
 
-              {/* Fixed Feedback readouts */}
-              <div className="h-6 flex items-center justify-center mb-1 select-none">
-                {roundOver && target && (
-                  <div className="animate-bounce text-center">
-                    {guessedCorrectly ? (
-                      <span className="text-xs font-black uppercase tracking-widest text-green-600 dark:text-green-400">
-                        Correct! It's {target.name.replace(/-/g, ' ')}!
-                      </span>
-                    ) : (
-                      <span className="text-xs font-black uppercase tracking-widest text-red-500 dark:text-red-400">
-                        Incorrect! It's {target.name.replace(/-/g, ' ')}!
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
+              {/* Answer options */}
+              {!loading && (
+                <div className="grid grid-cols-2 gap-3">
+                  {options.map((opt) => {
+                    const isSelected = selectedGuess === opt
+                    const isCorrectAnswer = target && opt === target.name
 
-              {/* Multiple Choice Answers & Next Round CTA */}
-              <div className="space-y-2.5">
-                {!loading && (
-                  <div className="grid grid-cols-2 gap-2.5">
-                    {options.map((opt) => {
-                      const isSelected = selectedGuess === opt
-                      const isCorrectAnswer = target && opt === target.name
-                      
-                      let btnStyle = 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-950/40 dark:hover:bg-slate-900 text-slate-850 dark:text-slate-200 border border-slate-200/50 dark:border-white/5'
-                      
-                      if (roundOver) {
-                        if (isCorrectAnswer) {
-                          btnStyle = 'bg-green-500/20 text-green-650 dark:text-green-400 border border-green-500/40 font-bold'
-                        } else if (isSelected) {
-                          btnStyle = 'bg-red-500/20 text-red-655 dark:text-red-450 border border-red-500/40 font-bold line-through'
-                        } else {
-                          btnStyle = 'bg-slate-50 dark:bg-slate-950/20 text-slate-400 border border-transparent opacity-40 cursor-not-allowed'
-                        }
+                    let cls = 'border border-border glass-panel text-foreground hover:border-muted-foreground'
+                    let icon = null
+
+                    if (roundOver) {
+                      if (isCorrectAnswer) {
+                        cls = 'border-2 border-emerald-500 bg-emerald-500/10 text-emerald-400'
+                        icon = <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      } else if (isSelected) {
+                        cls = 'border-2 border-rose-500 bg-rose-500/10 text-rose-400'
+                        icon = <XCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                      } else {
+                        cls = 'border border-border opacity-40 text-muted-foreground cursor-not-allowed'
                       }
+                    }
 
-                      return (
-                        <button
-                          key={opt}
-                          disabled={roundOver}
-                          onClick={() => handleGuess(opt)}
-                          className={`py-3 px-4 rounded-xl text-xs font-extrabold capitalize transition-all duration-200 select-none cursor-pointer truncate ${btnStyle}`}
-                        >
-                          {opt.replace(/-/g, ' ')}
-                        </button>
-                      )
-                    })}
+                    return (
+                      <button
+                        key={opt}
+                        disabled={roundOver}
+                        onClick={() => handleGuess(opt)}
+                        className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-bold capitalize transition-all duration-200 cursor-pointer ${cls}`}
+                      >
+                        {icon}
+                        <span className="truncate">{opt.replace(/-/g, ' ')}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Feedback banner */}
+              {roundOver && target && (
+                <div className={`rounded-2xl p-4 border flex flex-col sm:flex-row items-start sm:items-center gap-4 transition-all ${
+                  guessedCorrectly
+                    ? 'border-emerald-500/40 bg-emerald-500/10'
+                    : 'border-rose-500/40 bg-rose-500/10'
+                }`}>
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                    guessedCorrectly ? 'bg-emerald-500/20' : 'bg-rose-500/20'
+                  }`}>
+                    {guessedCorrectly
+                      ? <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                      : <XCircle className="w-5 h-5 text-rose-400" />
+                    }
                   </div>
-                )}
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-black ${guessedCorrectly ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {guessedCorrectly ? 'Correct Answer!' : 'Scanner Recalibration Required'}
+                    </p>
+                    <p className="text-xs text-muted-foreground font-medium mt-0.5 capitalize">
+                      It's <strong className="text-foreground capitalize">{target.name.replace(/-/g, ' ')}</strong>
+                      {' '}—{' '}
+                      <span className="font-fira">#{String(target.id).padStart(4, '0')}</span>
+                    </p>
+                  </div>
+                  <div className="flex gap-2 shrink-0 w-full sm:w-auto">
+                    <Link
+                      href={`/pokemon/${target.id}`}
+                      className="flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold border border-border text-foreground hover:bg-muted/30 transition-all text-center"
+                    >
+                      Analyze Profile
+                    </Link>
+                    <button
+                      onClick={generateNewRound}
+                      className="flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold text-white transition-all flex items-center justify-center gap-1.5"
+                      style={{ background: `linear-gradient(135deg, ${BRAND}, ${BRAND_DARK})` }}
+                    >
+                      <RotateCw className="w-3.5 h-3.5" />
+                      Load Next Round
+                    </button>
+                  </div>
+                </div>
+              )}
 
-                {roundOver && (
-                  <button
-                    onClick={generateNewRound}
-                    className="w-full py-3 bg-brand-red hover:bg-red-650 text-white font-extrabold text-xs rounded-xl shadow-md flex items-center justify-center gap-2 cursor-pointer transition-transform hover:scale-102"
-                  >
-                    <RotateCw className="w-4 h-4" /> Load Next Round
-                  </button>
-                )}
-              </div>
+              {/* Next round button (initial / after round) */}
+              {roundOver && !target && (
+                <button
+                  onClick={generateNewRound}
+                  className="w-full py-3 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2"
+                  style={{ background: `linear-gradient(135deg, ${BRAND}, ${BRAND_DARK})` }}
+                >
+                  <RotateCw className="w-4 h-4" /> Load Next Round
+                </button>
+              )}
             </div>
           </div>
         </section>
 
-        {/* STATS COUNT TICKER SECTION */}
-        <section className="bg-white dark:bg-slate-900/40 backdrop-blur-md rounded-3xl border border-slate-200/60 dark:border-white/10 shadow-md dark:shadow-none px-8 py-6 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-          <div>
-            <span className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white font-mono block">1,025</span>
-            <span className="text-[10px] text-slate-450 dark:text-slate-400 font-extrabold uppercase tracking-wider">Pokémon Available</span>
-          </div>
-          <div className="border-l border-slate-150 dark:border-white/5">
-            <span className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white font-mono block">18</span>
-            <span className="text-[10px] text-slate-450 dark:text-slate-400 font-extrabold uppercase tracking-wider">Elemental Types</span>
-          </div>
-          <div className="border-l border-slate-150 dark:border-white/5">
-            <span className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white font-mono block">Gen 1-9</span>
-            <span className="text-[10px] text-slate-450 dark:text-slate-400 font-extrabold uppercase tracking-wider">Seeded Generations</span>
-          </div>
-          <div className="border-l border-slate-150 dark:border-white/5">
-            <span className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white font-mono block">100%</span>
-            <span className="text-[10px] text-slate-450 dark:text-slate-400 font-extrabold uppercase tracking-wider">Responsive Layout</span>
-          </div>
-        </section>
-
-        {/* CORE TOOLS SECTION */}
+        {/* ══ AVAILABLE SUBSYSTEMS ══ */}
         <section className="space-y-6">
           <div className="text-center space-y-1">
-            <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-normal">Explore Core Database Tools</h2>
-            <p className="text-xs text-slate-555 dark:text-slate-400 leading-relaxed font-semibold">
-              Every utility is fully integrated with database metrics for seamless planning.
+            <h2 className="font-display font-black text-2xl md:text-3xl text-foreground">
+              Available Subsystems
+            </h2>
+            <p className="text-sm text-muted-foreground font-medium">
+              Every utility is fully integrated with the database for seamless tactical planning.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            
-            {/* Tool 1 */}
-            <div className="bg-white dark:bg-slate-900/40 backdrop-blur-md rounded-3xl p-6 border border-slate-200/60 dark:border-white/10 shadow-md hover:shadow-lg dark:shadow-none hover:-translate-y-1 hover:border-brand-red/30 transition-all duration-300">
-              <div className="space-y-3">
-                <div className="w-10 h-10 rounded-2xl bg-brand-red/10 flex items-center justify-center text-brand-red font-bold text-lg">
-                  <SlidersHorizontal className="w-5 h-5 text-brand-red" />
-                </div>
-                <h3 className="text-lg font-extrabold text-slate-850 dark:text-white">Advanced Filter Grid</h3>
-                <p className="text-xs text-slate-555 dark:text-slate-350 leading-relaxed font-medium">
-                  Search, filter by dual-type matrices, select generations, sort by base stats, and explore entries instantly.
-                </p>
-              </div>
-              <Link href="/pokedex" className="text-xs font-extrabold text-brand-red hover:underline flex items-center gap-1">
-                Open Grid →
-              </Link>
-            </div>
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
 
-            {/* Tool 2 */}
-            <div className="bg-white dark:bg-slate-900/40 backdrop-blur-md rounded-3xl p-6 border border-slate-200/60 dark:border-white/10 shadow-md hover:shadow-lg dark:shadow-none hover:-translate-y-1 hover:border-brand-blue/30 transition-all duration-300">
-              <div className="space-y-3">
-                <div className="w-10 h-10 rounded-2xl bg-brand-blue/10 flex items-center justify-center text-brand-blue font-bold text-lg">
-                  <Swords className="w-5 h-5 text-brand-blue" />
+            {/* Pokédex Subsystem — wide */}
+            <Link
+              href="/pokedex"
+              className="lg:col-span-2 glass-panel rounded-3xl border border-border p-6 flex flex-col gap-4 group hover:-translate-y-1 transition-all duration-300 hover:shadow-xl"
+              style={{ ['--hover-shadow' as string]: `0 20px 40px ${BRAND}20` }}
+              onMouseEnter={e => (e.currentTarget.style.boxShadow = `0 20px 40px ${BRAND}20`)}
+              onMouseLeave={e => (e.currentTarget.style.boxShadow = '')}
+            >
+              <div className="flex items-start gap-4">
+                <div
+                  className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300"
+                  style={{ background: `${BRAND}20` }}
+                >
+                  <BookOpen className="w-6 h-6" style={{ color: BRAND }} />
                 </div>
-                <h3 className="text-lg font-extrabold text-slate-855 dark:text-white">Stat Comparisons</h3>
-                <p className="text-xs text-slate-555 dark:text-slate-355 leading-relaxed font-medium">
-                  Compare base stats, dimensions, and defensive/offensive damage matchups between two Pokémon side-by-side.
-                </p>
+                <div className="space-y-1 flex-1">
+                  <h3 className="font-display font-black text-lg text-foreground">Pokédex Subsystem</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Full national database — search, filter by type &amp; generation, sort by any base stat. Inspect every entry in detail.
+                  </p>
+                </div>
               </div>
-              <Link href="/compare" className="text-xs font-extrabold text-brand-red hover:underline flex items-center gap-1">
-                Compare Stats →
-              </Link>
-            </div>
+              <div className="flex items-center gap-3 pt-2 border-t border-border mt-auto">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                </span>
+                <span className="text-xs text-muted-foreground font-semibold">Database Standby</span>
+                <span className="ml-auto px-2.5 py-0.5 rounded-full text-[10px] font-black border border-border text-muted-foreground">
+                  1,025 records
+                </span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
+              </div>
+            </Link>
 
-            {/* Tool 3 */}
-            <div className="bg-white dark:bg-slate-900/40 backdrop-blur-md rounded-3xl p-6 border border-slate-200/60 dark:border-white/10 shadow-md hover:shadow-lg dark:shadow-none hover:-translate-y-1 hover:border-amber-500/30 transition-all duration-300">
-              <div className="space-y-3">
-                <div className="w-10 h-10 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-600 font-bold text-lg">
-                  <Shield className="w-5 h-5 text-amber-600" />
+            {/* Compare Arena */}
+            <Link
+              href="/compare"
+              className="glass-panel rounded-3xl border border-border p-6 flex flex-col gap-4 group hover:-translate-y-1 transition-all duration-300"
+              onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 20px 40px #3b82f640')}
+              onMouseLeave={e => (e.currentTarget.style.boxShadow = '')}
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 bg-blue-500/15 group-hover:scale-110 transition-transform duration-300">
+                  <Swords className="w-6 h-6 text-blue-400" />
                 </div>
-                <h3 className="text-lg font-extrabold text-slate-855 dark:text-white">Team Builder</h3>
-                <p className="text-xs text-slate-555 dark:text-slate-355 leading-relaxed font-medium">
-                  Assemble custom teams, set levels, set custom nicknames, and evaluate type coverage options.
-                </p>
+                <div>
+                  <h3 className="font-display font-black text-lg text-foreground">Compare Arena</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed mt-1">
+                    Head-to-head stat comparison with type effectiveness analysis and battle verdict.
+                  </p>
+                </div>
               </div>
-              <Link href="/teams" className="text-xs font-extrabold text-brand-red hover:underline flex items-center gap-1">
-                Build Squad →
-              </Link>
-            </div>
+              <div className="flex items-center gap-2 pt-2 border-t border-border mt-auto">
+                <span className="text-xs text-muted-foreground font-semibold">Simulate Battles</span>
+                <span className="ml-auto px-2.5 py-0.5 rounded-full text-[10px] font-black bg-blue-500/15 text-blue-400 border border-blue-500/20">
+                  Dual Slots
+                </span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
+              </div>
+            </Link>
+
+            {/* Team Builder */}
+            <Link
+              href="/teams"
+              className="glass-panel rounded-3xl border border-border p-6 flex flex-col gap-4 group hover:-translate-y-1 transition-all duration-300"
+              onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 20px 40px #f59e0b40')}
+              onMouseLeave={e => (e.currentTarget.style.boxShadow = '')}
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 bg-amber-500/15 group-hover:scale-110 transition-transform duration-300">
+                  <Users className="w-6 h-6 text-amber-400" />
+                </div>
+                <div>
+                  <h3 className="font-display font-black text-lg text-foreground">Team Builder</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed mt-1">
+                    Assemble 6-member squads with level control, synergy scoring, and coverage auditing.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 pt-2 border-t border-border mt-auto">
+                <span className="text-xs text-muted-foreground font-semibold">Party Synergy</span>
+                <span className="ml-auto px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                  Auditing Active
+                </span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
+              </div>
+            </Link>
 
           </div>
         </section>
 
-      </main>
-
-      {/* Footer */}
-      <footer className="w-full py-8 mt-12 border-t border-slate-200/60 dark:border-white/5 bg-slate-50 dark:bg-slate-950/20 flex flex-col items-center justify-center text-center px-6">
-        <Logo className="mb-3" />
-        <div className="flex gap-6 mb-4 text-xs text-slate-500 dark:text-slate-400">
-          <Link className="hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer" href="/">Home</Link>
-          <Link className="hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer" href="/pokedex">Pokédex</Link>
-          <Link className="hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer" href="/compare">Compare</Link>
-          <Link className="hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer" href="/teams">Teams</Link>
-          <Link className="hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer" href="/about">About</Link>
-        </div>
-        <p className="text-[11px] text-slate-450 dark:text-slate-400 max-w-2xl">
-          Data provided by PokéAPI. Pokémon and Pokémon character names are trademarks of Nintendo.
-        </p>
-      </footer>
+      </div>
     </div>
   )
 }
